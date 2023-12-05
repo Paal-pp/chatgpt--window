@@ -1,33 +1,36 @@
 <template>
-  <div class="chat-history">
-    <ul>
-      <li v-for="session in sessions" :key="session.id" @click="selectSession(session.id)">
-        {{ session.name }}
-      </li>
-    </ul>
+  <div>
+    <!-- 显示聊天记录 -->
+    <div v-for="record in records" :key="record.id">
+      <p>{{ record.message }}</p>
+    </div>
   </div>
 </template>
 
 <script>
-import { defineComponent, toRefs } from 'vue';
-
-export default defineComponent({
+export default {
   props: {
-    sessions: Array
+    selectedSessionId: {
+      type: String,
+      required: false
+    }
   },
-  emits: ['selectSession'],
-  setup(props, { emit }) {
-    const { sessions } = toRefs(props);
-
-    const selectSession = (id) => {
-      emit('selectSession', id);
+  data() {
+    return {
+      records: [], // 存储聊天记录
     };
-
-    return { sessions, selectSession };
+  },
+  watch: {
+    selectedSessionId(newVal, oldVal) {
+      if (newVal !== oldVal) {
+        this.fetchRecords(newVal); // 当选中的会话ID变化时，获取新的聊天记录
+      }
+    }
+  },
+  methods: {
+    fetchRecords(sessionId) {
+      // 根据会话ID获取聊天记录的逻辑...
+    }
   }
-});
+};
 </script>
-
-<style>
-/* Add your CSS here */
-</style>
