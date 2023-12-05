@@ -5,8 +5,9 @@
         <div class="chat-history">
           <div v-for="session in sessions" :key="session.id" class="session-item">
             <button @click="selectSession(session)">{{ session.title }}   -        {{session.last_updated}}</button>
+            <ChatHistory :sessionId="selectedSessionId" />
           </div>
-          <ChatHistory :selectedSession="selectedSession" />
+
         </div>
 
         </div>
@@ -19,7 +20,6 @@
 
       <!-- 聊天消息区域 -->
       <div class="chat-messages">
-        <ChatHistory :selectedSessionId="selectedSessionId" />
         <!-- 消息列表 -->
         <div class="messages-list">
           <ChatHistory :sessions="sessions" />
@@ -55,8 +55,9 @@
         access_token: localStorage.getItem('access_token') || null
       });
       const sessions = ref([]);
-      const messages = ref([]);
+
       const selectedSession = ref(null);
+      const selectedSessionId = ref(null);
       const fetchUserData = () => {
         user.value.userId = localStorage.getItem('userId');
         user.value.username = localStorage.getItem('username') || 'Unknown User';
@@ -86,9 +87,13 @@
       // 组件挂载时，获取用户数据和会话
       onMounted(fetchUserData);
       const selectSession = (session) => {
-        selectedSession.value = session;
+        if (selectedSessionId && session) {
+          selectedSessionId.value = session.id;
+          console.log(session.id)
+          console.log(selectedSessionId.value)
+        }
       };
-      return { user, selectedSession, sessions,selectSession  };
+      return { user, selectedSession,selectedSessionId, sessions,selectSession  };
     }
   };
 
@@ -149,7 +154,8 @@
     height: 10%; /* 高度是辅助信息容器剩余的20% */
     width: 96%; /* 宽度与历史会话信息相同 */
     position: absolute; /* 绝对定位 */
-    bottom: 0.5vh; /* 底部与辅助信息容器的底部对齐 */
+
+    bottom: 2.6vh; /* 底部与辅助信息容器的底部对齐 */
     left: 1vh; /* 左边距离辅助信息容器左边的50% */
 
 

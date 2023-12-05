@@ -1,36 +1,26 @@
 <template>
-  <div>
-    <!-- 显示聊天记录 -->
-    <div v-for="record in records" :key="record.id">
-      <p>{{ record.message }}</p>
-    </div>
-  </div>
+  <div v-for="record in records" :key="record.timestamp">
+    <p>{{ record.message }}</p>
+    <p>{{ record.response }}</p>
+    <p>{{ formatTimestamp(record.timestamp) }}</p></div>
 </template>
 
 <script>
+import { ref, watch } from 'vue';
+import axios from 'axios'; // 确保安装并导入了axios
+
 export default {
   props: {
-    selectedSessionId: {
-      type: String,
-      required: false
-    }
+    sessionId: String,
   },
-  data() {
-    return {
-      records: [], // 存储聊天记录
-    };
+  setup(props) {
+    console.log("Current session ID in child:", props.sessionId);
+    watch(() => props.sessionId, (newId) => {
+      // 逻辑来处理新的会话ID
+      console.log("New session ID in child:", newId);
+    });
+
+    return {  };
   },
-  watch: {
-    selectedSessionId(newVal, oldVal) {
-      if (newVal !== oldVal) {
-        this.fetchRecords(newVal); // 当选中的会话ID变化时，获取新的聊天记录
-      }
-    }
-  },
-  methods: {
-    fetchRecords(sessionId) {
-      // 根据会话ID获取聊天记录的逻辑...
-    }
-  }
 };
 </script>
