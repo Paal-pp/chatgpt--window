@@ -39,7 +39,7 @@
 
 
   <script>
-  import { ref, onMounted ,provide } from 'vue';
+  import { ref, onMounted ,inject,provide } from 'vue';
   import axios from 'axios';
   import UserProfile from '@/components/UserProfile.vue';
   import ChatHistory from '@/components/ChatHistory.vue';
@@ -52,7 +52,7 @@
       ChatSession,
 
     },
-    setup() {
+    setup({emit}) {
       const user = ref({
         userId: localStorage.getItem('userId') || null,
         username: localStorage.getItem('username') || 'Unknown User',
@@ -63,7 +63,8 @@
       const selectedSession = ref(null);
       const selectedSessionId = ref(null);
 
-
+      const shouldRefresh = ref(false);
+      provide('shouldRefresh', shouldRefresh);
 
       const fetchUserData = () => {
         user.value.userId = localStorage.getItem('userId');
@@ -143,8 +144,8 @@
           // 检查响应是否表示消息成功发送
           if (response.status === 201) {
             messageContent.value = '';
-
             console.log("Message sent successfully", response.data);
+            shouldRefresh.value = true; // 通知子组件刷新数据
             // 这里可以添加更多的逻辑，例如清空输入框或者获取新的消息记录
           } else {
             console.error("Failed to send message", response.data);

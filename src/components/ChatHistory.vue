@@ -12,7 +12,7 @@
 </template>
 
 <script>
-import { ref, watch } from 'vue';
+import { ref, watch,watchEffect ,inject} from 'vue';
 import axios from 'axios'; // 确保安装并导入了axios
 
 export default {
@@ -26,12 +26,15 @@ export default {
     const totalRecords = ref(0);
     const currentPage = ref(1);
 
+    const shouldRefresh =inject('shouldRefresh')
+
+
     const printRecord = (record) => {
       console.log("test",record);
     };
 
 // 获取会话记录的方法
-    const fetchSessionRecords = async (page = 1, perPage = 10) => {
+    const fetchSessionRecords = async (page = 1, perPage = 100) => {
       try {
         const  url = `http://127.0.0.1:5000/api/history/${props.sessionId}/${props.user.userId}`
         const response = await axios.get(url, {
@@ -68,7 +71,16 @@ export default {
       }
     });
 
-    return {       records,
+    watchEffect(() => {
+      if (shouldRefresh && shouldRefresh.value) {
+        fetchSessionRecords();
+        shouldRefresh.value = false; // 重置状态
+      }
+    });
+
+    return {
+      shouldRefresh,
+      records,
       totalPages,
       totalRecords,
       currentPage,
