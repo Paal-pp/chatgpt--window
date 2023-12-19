@@ -1,19 +1,24 @@
 <template>
-    <div v-for="record in records" :key="record.timestamp" class="chat-record">
-      <div class="message-container sender">
-        <p class="chat-message">{{ record.message }}</p>
-        <p class="chat-time">{{ formatTimestamp(record.timestamp) }}</p>
-      </div>
-      <div class="message-container receiver">
-        <p class="chat-message">{{ record.response }}</p>
-        <p class="chat-time">{{ formatTimestamp(record.timestamp) }}</p>
-      </div>
+  <div class="messages-list" ref="messagesList">
+  <div v-for="record in records" :key="record.timestamp" class="chat-record">
+    <div class="message-container sender">
+      <!-- 使用 v-html 渲染 Markdown -->
+      <p class="chat-message" v-html="markdownToHtml(record.message)"></p>
+      <p class="chat-time">{{ formatTimestamp(record.timestamp) }}</p>
     </div>
+    <div class="message-container receiver">
+      <!-- 使用 v-html 渲染 Markdown -->
+      <p class="chat-message" v-html="markdownToHtml(record.response)"></p>
+      <p class="chat-time">{{ formatTimestamp(record.timestamp) }}</p>
+    </div>
+  </div>
+  </div>
 </template>
 
 <script>
-import { ref, watch,watchEffect ,inject} from 'vue';
+import { ref, watch,watchEffect ,inject,nextTick } from 'vue';
 import axios from 'axios'; // 确保安装并导入了axios
+import {marked} from 'marked'; // 导入 marked
 
 export default {
   props: {
@@ -21,22 +26,41 @@ export default {
     user: Object,
   },
   setup(props) {
+    const apiUrl = import.meta.env.VITE_API_URL;
     const records = ref([]); // 初始为空数组或根据需要设置初始值
     const totalPages = ref(0);
     const totalRecords = ref(0);
     const currentPage = ref(1);
-
+    const messagesList = ref(null);
     const shouldRefresh =inject('shouldRefresh')
 
+    const scrollToBottom = () => {
+      nextTick(() => {
+        if (messagesList.value) {
+          messagesList.value.scrollTop = messagesList.value.scrollHeight;
+        }
+      });
+    };
 
     const printRecord = (record) => {
       console.log("test",record);
     };
 
+    const markdownToHtml = (markdown) => {
+      console.log(markdown)
+      console.log(marked(markdown))
+      return marked(markdown);
+    };
 // 获取会话记录的方法
     const fetchSessionRecords = async (page = 1, perPage = 100) => {
       try {
-        const  url = `http://127.0.0.1:5000/api/history/${props.sessionId}/${props.user.userId}`
+        // 如果没有提供sessionId，直接返回，不执行任何操作
+        if (!props.sessionId) {
+          console.log("No sessionId provided");
+          return;
+        }
+
+        const url = `${apiUrl}/api/history/${props.sessionId}/${props.user.userId}`;
         const response = await axios.get(url, {
           headers: {
             'Authorization': `Bearer ${props.user.access_token}`
@@ -47,10 +71,12 @@ export default {
           totalPages.value = response.data.pages; // 获取总页数
           totalRecords.value = response.data.total; // 获取总记录数
           currentPage.value = response.data.current_page; // 获取当前页码
+          scrollToBottom();
         } else {
           // 处理数据不存在的情况
-          console.error("No records found in the response");}}
-      catch (error) {
+          console.error("No records found in the response");
+        }
+      } catch (error) {
         console.error("Error fetching session records:", error);
       }
     };
@@ -64,21 +90,22 @@ export default {
       return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
     };
 
-    watch(() => props.sessionId, (newId ,oldId) => {
-      // 逻辑来处理新的会话ID
-      if (newId != oldId) {
-        fetchSessionRecords()
+    watch(() => props.sessionId, (newId, oldId) => {
+      if (newId !== oldId) {
+        fetchSessionRecords();
       }
-    });
+    }, { immediate: true });
 
-    watchEffect(() => {
-      if (shouldRefresh && shouldRefresh.value) {
+// 对于 shouldRefresh 的 watch 保持不变
+    watch(shouldRefresh, (newValue) => {
+      if (newValue) {
         fetchSessionRecords();
         shouldRefresh.value = false; // 重置状态
       }
-    });
+    }, { immediate: true });
 
     return {
+      markdownToHtml,
       shouldRefresh,
       records,
       totalPages,
@@ -86,7 +113,8 @@ export default {
       currentPage,
       fetchSessionRecords,
       formatTimestamp,
-      printRecord};
+      printRecord,
+      messagesList};
   },
 };
 </script>
