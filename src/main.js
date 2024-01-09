@@ -3,7 +3,13 @@ import axios from 'axios';
 import { createApp } from 'vue';
 import App from './App.vue';
 import router from './router';
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { faCircleStop, faCircleArrowUp } from '@fortawesome/free-solid-svg-icons'
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 
+
+// 添加图标到库
+library.add(faCircleStop, faCircleArrowUp)
 
 axios.interceptors.response.use(
     response => response,
@@ -26,6 +32,9 @@ axios.interceptors.response.use(
     }
 );
 const app = createApp(App);
+
+// 注册 FontAwesomeIcon 组件
+app.component('font-awesome-icon', FontAwesomeIcon)
 
 app.use(router);
 app.config.globalProperties.$apiUrl = 'http://localhost:5000';

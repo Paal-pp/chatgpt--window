@@ -1,22 +1,24 @@
 <template>
   <div class="messages-list" ref="messagesList">
-  <div v-for="record in records" :key="record.timestamp" class="chat-record">
-    <div class="message-container sender">
-      <!-- 使用 v-html 渲染 Markdown -->
-      <p class="chat-message" v-html="markdownToHtml(record.message)"></p>
-      <p class="chat-time">{{ formatTimestamp(record.timestamp) }}</p>
+    <div v-for="record in records" :key="record.timestamp" class="chat-record">
+      <!-- 发送者消息 -->
+      <div v-if="record.message" :class="['message-container', 'sender', record.isNew ? 'new-message' : '']">
+        <p class="chat-message" v-html="markdownToHtml(record.message)"></p>
+        <p class="chat-time">{{ formatTimestamp(record.timestamp) }}</p>
+      </div>
+
+      <!-- 接收者消息 -->
+      <div v-if="record.response" :class="['message-container', 'receiver', record.isNew ? 'new-message' : '']">
+        <p class="chat-message" v-html="markdownToHtml(record.response)"></p>
+        <p class="chat-time">{{ formatTimestamp(record.timestamp) }}</p>
+      </div>
     </div>
-    <div class="message-container receiver">
-      <!-- 使用 v-html 渲染 Markdown -->
-      <p class="chat-message" v-html="markdownToHtml(record.response)"></p>
-      <p class="chat-time">{{ formatTimestamp(record.timestamp) }}</p>
-    </div>
-  </div>
   </div>
 </template>
 
+
 <script>
-import { ref, watch,watchEffect ,inject,nextTick } from 'vue';
+import {ref, watch, watchEffect, inject, nextTick, onBeforeUnmount} from 'vue';
 import axios from 'axios'; // 确保安装并导入了axios
 import {marked} from 'marked'; // 导入 marked
 
@@ -33,6 +35,8 @@ export default {
     const currentPage = ref(1);
     const messagesList = ref(null);
     const shouldRefresh =inject('shouldRefresh')
+    const timers = ref([]);
+    let updateTimer = null;
 
     const scrollToBottom = () => {
       nextTick(() => {
@@ -54,7 +58,6 @@ export default {
 // 获取会话记录的方法
     const fetchSessionRecords = async (page = 1, perPage = 100) => {
       try {
-        // 如果没有提供sessionId，直接返回，不执行任何操作
         if (!props.sessionId) {
           console.log("No sessionId provided");
           return;
@@ -66,20 +69,40 @@ export default {
             'Authorization': `Bearer ${props.user.access_token}`
           }
         });
+
         if (response.data && response.data.records) {
-          records.value = response.data.records; // 获取记录数组
-          totalPages.value = response.data.pages; // 获取总页数
-          totalRecords.value = response.data.total; // 获取总记录数
-          currentPage.value = response.data.current_page; // 获取当前页码
+
+          const oneMinuteAgo = Date.now() - 20000; // 当前时间的一分钟前
+          records.value = response.data.records.map(record => {
+            const isNew = new Date(record.timestamp).getTime() > oneMinuteAgo;
+            if (isNew) {
+              const timer = setTimeout(() => {
+                record.isNew = false;
+              }, 1000); // 5分钟后，定时器将isNew设置为false
+              timers.value.push(timer);
+            }
+            return { ...record, isNew };
+          });
           scrollToBottom();
+          // ... 其他状态更新...
         } else {
-          // 处理数据不存在的情况
           console.error("No records found in the response");
         }
       } catch (error) {
         console.error("Error fetching session records:", error);
       }
     };
+
+    const updateRecordsStatus = () => {
+      const oneMinuteAgo = Date.now() - 20000;
+      for (const record of records.value) {
+        if (new Date(record.timestamp).getTime() < oneMinuteAgo) {
+          record.isNew = false; // 超过一分钟的消息不再标记为新
+        }
+      }
+    };
+
+    updateTimer = setInterval(updateRecordsStatus, 1000);
 
     // 定义 formatTimestamp 方法
     const formatTimestamp = (timestamp) => {
@@ -103,6 +126,12 @@ export default {
         shouldRefresh.value = false; // 重置状态
       }
     }, { immediate: true });
+
+    onBeforeUnmount(() => {
+      if (updateTimer) {
+        clearInterval(updateTimer); // 清理定时器
+      }
+    });
 
     return {
       markdownToHtml,
@@ -129,9 +158,25 @@ export default {
   word-break: break-word; /* 防止长文本溢出 */
 }
 .chat-record{
+  width: 40%;
+  align-items: center; /* 垂直居中对齐 */
 
 }
+.chat-message span {
+  margin: 0; /* 确保没有外边距 */
+  padding: 0; /* 确保没有内边距 */
+  display: inline; /* 保持行内元素的默认显示方式 */
+}
+
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* 垂直居中对齐 */
+  width: 100%; /* 设置宽度为100%以允许子元素居中 */
+  margin: 0 auto; /* 水平居中 */
+}
 .sender {
+  font-size: 50px;
   margin-bottom: 16px; /* 每条消息下方的间隔 */
   right: 1vh;
   align-self: flex-end;
@@ -141,25 +186,26 @@ export default {
 }
 
 .receiver {
-
   left: 1vh;
   align-self: flex-start;
-  background-color: #dcf8c6;
   margin-left: 10px; /* 与左边界保持一定间距 */
   margin-right: auto; /* 将消息对齐到左边 */
 }
 
 .chat-message {
-
   margin: 0;
-  font-size: 16px;
+  font-size: 1rem;
   line-height: 24px;
 }
 
 .chat-time {
   align-self: flex-end;
-  font-size: 12px;
+  font-size: 18px;
   color: #999999;
-  margin-top: 8px;
+  margin-top :0;
+  margin-bottom: 0;
+}
+.new-message {
+  background-color: #e0f7fa; /* 选择一个突出的颜色 */
 }
 </style>

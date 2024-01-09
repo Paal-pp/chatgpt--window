@@ -4,31 +4,30 @@
     <!-- 登录表单的外层容器 -->
     <div class="login-form">
       <div class="left-form">
-            <img src="/muzata-login.jpg">
+
       </div>
       <div class="right-form">
-      <h1 class="MontserratAlternates">Hello!</h1>
-      <p class="Poppinslight">Welcome to GPT, merande's internal network</p>
-      <!-- 登录表单 -->
-      <form @submit.prevent="login">
-        <!-- 用户名输入 -->
-        <h2 class="Poppinslight">Username</h2>
-        <input type="Username" v-model="credentials.username" placeholder="Username" >
-        <!-- 密码输入 -->
-        <h3 class="Poppinslight">Password</h3>
-        <input type="Password" v-model="credentials.password" placeholder="Password" class="Poppinslight">
-        <!-- 记住我复选框 -->
-        <div class="remember-me">
-          <input type="checkbox" id="remember" v-model="remember" class="Poppinsmedium">
-          <label for="remember" class="Poppinslight">Remember me</label>
-        </div>
-        <!-- 登录按钮 -->
-        <button type="submit" class="Poppinsmedium">Sign In</button>
-      </form>
+        <!-- 登录表单 -->
+        <form @submit.prevent="login">
+          <!-- 用户名输入 -->
+          <label for="username" class="form-label">用户名</label>
+          <input type="text" id="username" v-model="credentials.username" placeholder="Username" class="form-input">
+          <!-- 密码输入 -->
+          <label for="password" class="form-label">密码</label>
+          <input type="password" id="password" v-model="credentials.password" placeholder="Password" class="form-input">
+          <!-- 记住我复选框 -->
+          <div class="remember-me">
+<!--            <input type="checkbox" id="remember" v-model="remember" class="checkbox">-->
+<!--            <label for="remember" class="form-label">记住密码</label>-->
+          </div>
+          <!-- 登录按钮 -->
+          <button type="submit" class="login-button">登  录</button>
+        </form>
       </div>
     </div>
   </div>
 </template>
+
 
 <script>
 import axios from 'axios';
@@ -42,10 +41,12 @@ export default {
     const credentials = ref({ username: '', password: '' });
     const error = ref('');
     const router = useRouter();
+    const remember = ref(false);
 
     const login = async () => {
       try {
         console.log('API URL:', apiUrl);
+
         // 使用模板字符串``以便插入变量
         const response = await axios.post(`${apiUrl}`+`/login`, credentials.value);
         localStorage.setItem('access_token', response.data.access_token);
@@ -67,7 +68,7 @@ export default {
         }
       }
     };
-    return { credentials, error, login };
+    return { credentials, error, login,remember };
   }
 };
 </script>
@@ -77,150 +78,116 @@ export default {
 html, body {
   margin: 0;
   padding: 0;
-  min-height: 100vh;
-  min-width: 100vh;
-  background-image: url('/login_backgroup.jpg'); /* 确保路径和文件名正确 */
-  background-size:cover;
-  overflow: hidden; /* 防止滚动条的产生 */
+  height: 100%;
+  width: 100%;
+  background-image: url('/login_backgroup.jpg');
+  background-size: cover;
+  overflow: hidden;
 }
+
+.login-container {
+  display: flex; /* 使用 flex 布局 */
+  align-items: stretch; /* 确保子项高度相同 */
+  height: 100vh; /* 容器高度为视口的高度 */
+}
+
 .login-form {
-  background-color: #ffffff;
-  width: 55vw;       /* 设置宽度为视口宽度的70% */
-  height: 69vh;      /* 设置高度为视口高度的60% */
-  position: absolute; /* 确保子元素的绝对定位是相对于此容器 */
-  top: 50%;          /* 顶部对齐到视口中心 */
-  left: 50%;         /* 左侧对齐到视口中心 */
-  transform: translate(-50%, -50%); /* 使用变换向左和向上移动自身宽度和高度的50% */
-  display: flex;    /* 启用Flexbox */
-  padding: 0; /* 确保父元素没有内边距 */
-  margin: 0; /* 确保父元素没有外边距 */
-}
-.left-form {
+  width: 41.25vw;
+  min-height: 51.75vh;
   position: absolute;
-  left: 0;
-  width: 50%; /* 设定宽度为父容器的30% */
-  height: 100%; /* 高度与父容器相同 */
-  padding: 0; /* 确保父元素没有内边距 */
-  margin: 0; /* 确保父元素没有外边距 */
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: stretch; /* 这将确保子元素高度拉伸以匹配容器的高度 */
 }
 
-.left-form img {
-  width: 100%; /* 图片宽度占满容器 */
-  height: 100%; /* 图片高度占满容器 */
-  object-fit: contain; /* 保持图片原始长宽比例 */
-}
-.right-form h1 {
-  font-size:400%;
-  display: flex;
-  flex-direction: column; /* 子元素垂直排列 */
-  position: absolute;
-  top :7vh;
-  left: 2vh;
-  width: 100%; /* 可以指定一个最大宽度，例如 max-width: 300px; */
-
-}
-.right-form p {
-  position: absolute;
-  top :13vh;
-  left: 2vh;
-  font-size:250%;
-  color: #cccccc;
-  display: flex;
-  flex-direction: column; /* 子元素垂直排列 */
-  align-items: center; /* 子元素水平居中 */
-  width: 95%; /* 可以指定一个最大宽度，例如 max-width: 300px; */
-
-}
-.right-form h2{
-  position: absolute;
-  top :28vh;
-  left: 2vh;
-  font-size:150%;
-  color: #cccccc;
-  display: flex;
-  flex-direction: column; /* 子元素垂直排列 */
-  width: 100%; /* 可以指定一个最大宽度，例如 max-width: 300px; */
-}
-.right-form h3{
-  position: absolute;
-  top :35vh;
-  left: 2vh;
-  font-size:150%;
-  color: #cccccc;
-  display: flex;
-  flex-direction: column; /* 子元素垂直排列 */
-  width: 100%; /* 可以指定一个最大宽度，例如 max-width: 300px; */
-}
-.right-form form {
-  display: flex;
-  flex-direction: column; /* 子元素垂直排列 */
-  align-items: center; /* 子元素水平居中 */
-  width: 100%; /* 可以指定一个最大宽度，例如 max-width: 300px; */
-}
-/* 输入框样式 */
-.right-form input[type="Username"] {
-  position: absolute;
-  top :33vh;
-  left: 2vh;
-  padding: 10px;
-  width: 60%;
-  margin-bottom: 10px; /* 输入框之间的间距 */
-  border: 1px solid #ddd; /* 边框样式 */
-  border-radius: 4px; /* 轻微的圆角 */
-  box-sizing: border-box; /* 边框和内填充包含在宽度内 */
-}
-.right-form input[type="Password"] {
-  position: absolute;
-  top :40vh;
-  left: 2vh;
-  padding: 10px;
-  width: 60%;
-  margin-bottom: 10px; /* 输入框之间的间距 */
-  border: 1px solid #ddd; /* 边框样式 */
-  border-radius: 4px; /* 轻微的圆角 */
-  box-sizing: border-box; /* 边框和内填充包含在宽度内 */
-}
-.right-form {
-  position: absolute;
-  right: 0;
-  width: 50%; /* 剩余的宽度 */
-  height: 100%; /* 高度与父容器相同 */
+.left-form, .right-form {
+  flex: 1; /* 两个子容器平分可用空间 */
   display: flex;
   flex-direction: column;
-  padding: 0; /* 确保父元素没有内边距 */
-  margin: 0; /* 确保父元素没有外边距 */
 }
-/* 记住我复选框样式 */
-.remember-me {
-  position: absolute;
-  top :44vh;
-  left: 2vh;
-  display: flex; /* 使用flex布局 */
-  justify-content: center; /* 居中复选框 */
-  margin-bottom: 10px; /* 与按钮间的间距 */
+
+
+.left-form {
+  background-image: url('/muzata-login.jpg');
+  background-size: cover;
+  background-position: center center;
 }
-/* 按钮样式 */
-.right-form button {
-  position: absolute;
-  top :50vh;
-  left: 2vh;
-  padding: 10px;
-  width: 20%;
+
+.right-form {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  background-color: white;
+  justify-content: center;
+  padding: 20px;
+}
+
+
+.form-label {
+  /* 移除标签的外边距确保紧挨复选框 */
+  font-size: 20px; /* 字体大小根据效果图调整 */
+  color: #333; /* 字体颜色 */
+  /* 与输入框的间距 */
+  margin: 0 0 8px;
+
+  display: block
+}
+
+.checkbox{
+  margin-right: 5px;
+}
+.form-input {
+  width: 60%; /* 调整宽度为父容器的60% */
+  border: 1px solid #CCC;
+  border-radius: 4px;
+  padding: 15px;
+  font-size: 16px;
+  margin-bottom: 20px; /* 保持输入框之间的间距 */
+}
+.login-button {
+  width: 20%; /* 按钮宽度占满父容器 */
   background-color: #0041c6; /* 按钮背景颜色 */
   color: white; /* 按钮文字颜色 */
-  border: none;
-  border-radius: 4px;
-  cursor: pointer; /* 鼠标悬停时的手型图标 */
-  box-sizing: border-box; /* 边框和内填充包含在宽度内 */
+  border: none; /* 无边框 */
+  border-radius: 4px; /* 圆角边框 */
+  padding: 15px; /* 较大的内边距 */
+  font-size: 18px; /* 较大的字体大小 */
+  cursor: pointer; /* 鼠标指针变为手形 */
 }
-.right-form button:hover {
-  background-color: darkblue; /* 鼠标悬停时的背景颜色变化 */
+.checkbox {
+  margin-right: 10px; /* 复选框和标签之间的间距 */
 }
-.Poppinsmedium {
-  font-family: 'Poppins medium',serif ;
+
+.remember-me {
+  display: flex;
+  align-items: center; /* 垂直居中对齐 */
+  margin-bottom: 20px; /* 与登录按钮的间距 */
+  justify-content: flex-start; /* 水平方向靠左对齐 */
 }
-.MontserratAlternates {
-   font-family: 'Montserrat Alternates',serif ;
- }
+
+.login-button:hover {
+  background-color: darkblue;
+}
+
+
+@media (max-width: 768px) {
+  .login-form {
+    width: 90%; /* 在较小屏幕上，可能需要调整为固定百分比 */
+    height: auto; /* 高度可调整为自动，以适应内容 */
+    flex-direction: column;
+  }
+
+  .left-form, .right-form {
+    width: 100%;
+  }
+
+  .left-form {
+    order: 2; /* 在移动视图中将图片放在底部 */
+  }
+
+  .right-form {
+    order: 1; /* 将表单放在顶部 */
+  }
+}
 
 </style>
