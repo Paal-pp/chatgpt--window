@@ -1,10 +1,11 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import ChatView from '@/views/ChatView.vue';
 import LoginView from '@/views/LoginView.vue';
+import Stream from '@/views/steam.vue'
 
 const routes = [
     {
-        path: '/',
+        path: '/chat',
         name: 'Chat',
         component: ChatView,
         meta: { requiresAuth: true } // 聊天视图需要认证
@@ -13,6 +14,11 @@ const routes = [
         path: '/login',
         name: 'Login',
         component: LoginView // 登录组件
+    },
+    {
+        path: '/stream',
+        name: 'stream',
+        component: Stream // 登录组件
     }
     // 其他路由定义...
 ];
@@ -23,14 +29,18 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
+    console.log('Routing from', from.path, 'to', to.path);
     const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
-    const isLoggedIn = localStorage.getItem('access_token'); // 直接从localStorage检查token
+    const isLoggedIn = localStorage.getItem('access_token');
+
+    console.log('Requires auth:', requiresAuth, 'Is logged in:', !!isLoggedIn);
 
     if (requiresAuth && !isLoggedIn) {
-        next('/login'); // 重定向到登录页面
+        next('/login');
     } else {
-        next(); // 允许访问
+        next();
     }
 });
+
 
 export default router;

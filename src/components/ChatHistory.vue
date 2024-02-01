@@ -18,17 +18,20 @@
 
 
 <script>
-import {ref, watch, watchEffect, inject, nextTick, onBeforeUnmount} from 'vue';
+import {ref, watch, watchEffect, inject, nextTick, onMounted,onBeforeUnmount} from 'vue';
 import axios from 'axios'; // 确保安装并导入了axios
 import {marked} from 'marked'; // 导入 marked
+
 
 export default {
   props: {
     sessionId: String,
     user: Object,
+    shouldConnectWebSocket:Boolean
   },
-  setup(props) {
+  setup(props, {emit}) {
     const apiUrl = import.meta.env.VITE_API_URL;
+    const wsurl = import.meta.env.VITE_SOCK_API_URL;
     const records = ref([]); // 初始为空数组或根据需要设置初始值
     const totalPages = ref(0);
     const totalRecords = ref(0);
@@ -37,6 +40,31 @@ export default {
     const shouldRefresh =inject('shouldRefresh')
     const timers = ref([]);
     let updateTimer = null;
+    let socket =null;
+
+    const connectWebSocket = () => {
+      if (!socket) {
+        console.log(`props.sessionId is ${props.sessionId}`)
+        socket = new WebSocket(`${wsurl}/${props.sessionId}`);
+        socket.onopen = function() {
+          console.log("WebSocket connection established");
+          emit('connection-established');
+        };
+        socket.onmessage = function(event) {
+          const message = JSON.parse(event.data);
+          console.log(message)
+          records.value.push(message); // 假设服务器发送的消息格式与records兼容
+          scrollToBottom();
+        };
+        socket.onerror = function(error) {
+          console.error("WebSocket error:", error);
+        };
+        socket.onclose = function() {
+          console.log("WebSocket connection closed");
+        };
+      }
+    };
+
 
     const scrollToBottom = () => {
       nextTick(() => {
@@ -63,7 +91,7 @@ export default {
           return;
         }
 
-        const url = `${apiUrl}/api/history/${props.sessionId}/${props.user.userId}`;
+        const url = `${apiUrl}/chat/history/${props.sessionId}/${props.user.userId}`;
         const response = await axios.get(url, {
           headers: {
             'Authorization': `Bearer ${props.user.access_token}`
@@ -133,6 +161,24 @@ export default {
       }
     });
 
+    onMounted(() => {
+      if (props.shouldConnectWebSocket) {
+        connectWebSocket();
+      }
+    });
+    watch(() => props.shouldConnectWebSocket, (newValue) => {
+      if (newValue) {
+        connectWebSocket();
+
+      }
+    },{ immediate: true });
+
+    onBeforeUnmount(() => {
+      if (socket) {
+        socket.close();
+      }
+    });
+
     return {
       markdownToHtml,
       shouldRefresh,
@@ -143,10 +189,12 @@ export default {
       fetchSessionRecords,
       formatTimestamp,
       printRecord,
-      messagesList};
+      messagesList,
+      connectWebSocket};
   },
 };
 </script>
+
 <style >
 .message-container {
   display: flex;

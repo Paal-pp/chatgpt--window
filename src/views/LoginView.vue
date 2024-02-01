@@ -37,24 +37,23 @@ import { useRouter } from 'vue-router';
 export default {
   name: 'LoginView',
   setup() {
-    const apiUrl = import.meta.env.VITE_API_URL;
     const credentials = ref({ username: '', password: '' });
     const error = ref('');
     const router = useRouter();
-    const remember = ref(false);
+    const apiUrl = import.meta.env.VITE_API_URL;
 
     const login = async () => {
+      console.log("开始登录")
       try {
-        console.log('API URL:', apiUrl);
-
+        console.log("credentials",credentials.value)
         // 使用模板字符串``以便插入变量
-        const response = await axios.post(`${apiUrl}`+`/login`, credentials.value);
+        const response = await axios.post(`${apiUrl}/login`, credentials.value);
         localStorage.setItem('access_token', response.data.access_token);
         localStorage.setItem('username', response.data.Username);
         localStorage.setItem('userId', response.data.Userid);
-        console.log('API URL:', apiUrl);
-        await router.push('/'); // 假设登录成功后跳转到主页
+        await router.push('/chat'); // 假设登录成功后跳转到主页
       } catch (err) {
+        console.log(err)
         console.error(err); // 将错误记录到控制台以便调试
         if (err.response) {
           // 处理服务器返回的HTTP错误
@@ -68,10 +67,11 @@ export default {
         }
       }
     };
-    return { credentials, error, login,remember };
+    return { credentials, error, login };
   }
 };
 </script>
+
 
 <style>
 /* 全局样式重置 */
