@@ -11,14 +11,17 @@ const routes = [
         meta: { requiresAuth: true } // 聊天视图需要认证
     },
     {
+        path: '/',
+        redirect: '/chat' // 重定向到 /chat
+    },
+    {
         path: '/login',
         name: 'Login',
         component: LoginView // 登录组件
     },
     {
-        path: '/stream',
-        name: 'stream',
-        component: Stream // 登录组件
+        path: '/chat/:sessionId',
+        component: ChatView
     }
     // 其他路由定义...
 ];

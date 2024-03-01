@@ -1,6 +1,7 @@
 <template>
   <div class="messages-list" ref="messagesList">
-    <div v-for="record in records" :key="record.timestamp" class="chat-record">
+    <div class="chat-record">
+    <div v-for="record in records" :key="record.timestamp" >
       <!-- 发送者消息 -->
       <div v-if="record.message" :class="['message-container', 'sender', record.isNew ? 'new-message' : '']">
         <p class="chat-message" v-html="markdownToHtml(record.message)"></p>
@@ -12,6 +13,15 @@
         <p class="chat-message" v-html="markdownToHtml(record.response)"></p>
         <p class="chat-time">{{ formatTimestamp(record.timestamp) }}</p>
       </div>
+    </div>
+    <div v-if="latestMessage && latestMessage.message" :class="['message-container', 'sender', latestMessage.isNew ? 'new-message' : '']">
+      <p class="chat-message" v-html="markdownToHtml(latestMessage.message)"></p>
+      <p class="chat-time">{{ formatTimestamp(latestMessage.timestamp) }}</p>
+    </div>
+    <div v-if="latestMessage && latestMessage.response" :class="['message-container', 'receiver', latestMessage.isNew ? 'new-message' : '']">
+      <p class="chat-message" v-html="markdownToHtml(latestMessage.response)"></p>
+      <p class="chat-time">{{ formatTimestamp(latestMessage.timestamp) }}</p>
+    </div>
     </div>
   </div>
 </template>
@@ -38,6 +48,7 @@ export default {
     const currentPage = ref(1);
     const messagesList = ref(null);
     const shouldRefresh =inject('shouldRefresh')
+    const latestMessage=ref({})
     const timers = ref([]);
     let updateTimer = null;
     let socket =null;
@@ -53,17 +64,38 @@ export default {
         socket.onmessage = function(event) {
           const message = JSON.parse(event.data);
           console.log(message)
-          records.value.push(message); // 假设服务器发送的消息格式与records兼容
-          scrollToBottom();
+          latestMessage.value = {
+            "message": message.message,
+            "response": message.response,
+            "timestamp": message.timestamp
+          }
+
+          // 检查接收到的消息的 response 是否为 "发送完毕"
+          if (message.response === "发送完毕") {
+            console.log("Response is '发送完毕', fetching session records and resetting latestMessage.");
+            fetchSessionRecords(); // 调用 fetchSessionRecords
+            latestMessage.value = {}; // 重置 latestMessage
+          } else {
+            scrollToBottom();
+          }
         };
+        socket.onclose = function(event) {
+          console.log("WebSocket connection closed");
+          console.log(`Close event with code: ${event.code}, reason: ${event.reason}`);
+
+          if (event.code === 1000) {
+            console.log("Connection closed normally, resetting latestMessage");
+            latestMessage.value = {};
+            fetchSessionRecords();
+          }
+        };
+
         socket.onerror = function(error) {
           console.error("WebSocket error:", error);
         };
-        socket.onclose = function() {
-          console.log("WebSocket connection closed");
-        };
       }
     };
+
 
 
     const scrollToBottom = () => {
@@ -190,10 +222,12 @@ export default {
       formatTimestamp,
       printRecord,
       messagesList,
-      connectWebSocket};
+      connectWebSocket,
+    latestMessage};
   },
 };
 </script>
+
 
 <style >
 .message-container {

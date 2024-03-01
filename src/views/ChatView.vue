@@ -2,19 +2,21 @@
   <div class="chat-container">
     <div class="sidebar">
 
+      <div class="creatbuttom">
+        <button @click="createNewSession" >创建会话</button>
+      </div>
       <!-- 历史会话信息 -->
       <div class="chat-session">
-        <div class="creatbuttom">
-          <button @click="createNewSession" >创建会话</button>
-        </div>
         <div>
           <div v-for="session in sessions" :key="session.id" class="session-item">
             <button @click="selectSession(session)">{{ session.title }}</button>
-            <!--                <select @change="handleAction($event, session.id)">-->
-            <!--                  <option value="">...</option>-->
-            <!--                  <option value="rename">重命名</option>-->
-            <!--                  <option value="delete">删除</option>-->
-            <!--                </select>-->
+            <div class="dropdown">
+              <button class="dropbtn">...</button>
+              <div class="dropdown-content">
+                <a href="#" @click="confirmDelete(session)">删除</a>
+                <a href="#" @click="promptRename(session)">重命名</a> <!-- 新增重命名选项 -->
+              </div>
+            </div>
           </div>
         </div>
 
@@ -70,7 +72,7 @@
 
 
 <script>
-import { ref, onMounted ,inject,provide } from 'vue';
+import {ref, onMounted, inject, provide, watch} from 'vue';
 import axios from 'axios';
 import ChatHistory from '@/components/ChatHistory.vue';
 import {FontAwesomeIcon} from "@fortawesome/vue-fontawesome";
@@ -185,27 +187,86 @@ export default {
           selectedSessionId.value = response.data.session_id;
           // 这里可以添加代码以获取新会话的聊天记录或更新会话列表
           // 例如: fetchSessionRecords(selectedSessionId.value);
+          localStorage.setItem('selectedSessionId', response.data.session_id);
+
         }
       } catch (error) {
         console.error("Error creating new session:", error.response.data);
       }
     };
 
-    const handleRename = (sessionId) => {
-      // 添加处理重命名会话的逻辑
-      console.log("Renaming session:", sessionId);
-      // 可以调用API或其他逻辑来更新会话名称
+    const confirmDelete = (session) => {
+      if (window.confirm(`确定要删除会话 ${session.title} 吗？`)) {
+        // 调用API删除会话
+        const data = {
+          user_id: user.value.userId, // 替换为实际的用户ID
+          session_id: selectedSessionId.value  // 替换为要删除的会话ID
+        };
+        console.log(data)
+        console.log(user.value.userId)
+        console.log(selectedSessionId.value)
+        try {
+          const response =  fetch(`${apiUrl}/chat/session/deleter`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+          });
+
+          if (!response.ok) {
+            new Error('请求失败，状态码：' + response.status);
+          }
+
+          // 请求成功处理，例如更新UI或状态
+          console.log('会话删除成功');
+        } catch (error) {
+          console.error('删除会话时出错：', error);
+        }
+      }
+      fetchSessions()
     };
 
-    const handleDelete = (sessionId) => {
-      // 添加处理删除会话的逻辑
-      console.log("Deleting session:", sessionId);
-      // 可以调用API或其他逻辑来删除会话
+    const promptRename = (session) => {
+      // 使用 window.prompt 弹出输入框，预填充当前会话标题
+      const newTitle = window.prompt("请输入新的会话标题", session.title);
+      if (newTitle && newTitle !== session.title) {
+        // 如果用户输入了新标题且与旧标题不同，则调用后端API进行更新
+        renameSession(session, newTitle);
+      }
+      // 如果用户点击取消或未做更改，则不执行任何操作
+    };
+
+    const renameSession = async (session, newTitle) => {
+      // 构造请求体
+      const data = {
+        user_id: user.value.userId,
+        session_id: selectedSessionId.value,
+        newtitle: newTitle
+      };
+      console
+
+      // 发送请求到后端进行更新
+      try {
+        const response = await axios.post(`${apiUrl}/chat/session/rename`, data, {
+          headers: {
+            'Authorization': `Bearer ${user.value.access_token}`
+          }
+        });
+        if (response.status === 205) {
+          console.log("Session renamed successfully");
+          session.title = newTitle; // 更新前端显示的会话标题
+          fetchSessions(); // 重新获取会话列表以更新显示
+        }
+      } catch (error) {
+        console.error("Error renaming session:", error);
+      }
     };
 
     const sendMessage = async () => {
       const trimmedMessageContent = messageContent.value.trim();
       if (trimmedMessageContent && !isSending.value) {
+        messageContent.value = ''; // 清空输入框
         isSending.value = true; // 开始发送，禁用发送按钮
         if (selectedSessionId.value === null) {
           selectedSessionId.value = uuidv4(); // 生成新的 session ID
@@ -260,6 +321,28 @@ export default {
       }
     };
 
+    onMounted(() => {
+      fetchUserData();
+      const savedSessionId = localStorage.getItem('selectedSessionId');
+      if (savedSessionId) {
+        selectedSessionId.value = savedSessionId;
+      }
+      // 其他挂载时需要执行的逻辑...
+    });
+    watch(selectedSessionId, (newValue, oldValue) => {
+      if (newValue === undefined) {
+        console.log('Attempting to restore selectedSessionId from localStorage');
+        const storedSessionId = localStorage.getItem('selectedSessionId');
+        if (storedSessionId) {
+          selectedSessionId.value = storedSessionId;
+          console.log(`Restored selectedSessionId to ${storedSessionId} from localStorage`);
+        } else {
+          console.warn('No selectedSessionId found in localStorage');
+          // 可以设置一个默认值或采取其他措施
+        }
+      }
+      console.log(`selectedSessionId changed from ${oldValue} to ${newValue}`);
+    });
 
 
     // 组件挂载时，获取用户数据和会话
@@ -268,12 +351,13 @@ export default {
       console.log("Session selected:", session);
       if (session && session.session_id) {
         selectedSessionId.value = session.session_id;
+        localStorage.setItem('selectedSessionId', session.session_id);
       }
     };
 
 
 
-    return { user, selectedSession,selectedSessionId,messageContent, sessions,isSending,selectedModel,selecteresponse,shouldConnectWebSocket,selectSession,createNewSession ,sendMessage,handleKeydown,adjustTextareaHeight,handleDelete,handleRename,chatHistoryRef };
+    return { user, selectedSession,selectedSessionId,messageContent, sessions,isSending,selectedModel,selecteresponse,shouldConnectWebSocket,promptRename,selectSession,createNewSession ,sendMessage,handleKeydown,adjustTextareaHeight,confirmDelete,chatHistoryRef };
   }
 };
 
@@ -305,9 +389,12 @@ export default {
 /* 历史会话信息容器样式 */
 .chat-session {
   border: 1px solid #181818;
-  height: 90%; /* 高度是辅助信息容器的80% */
+  height: 80%; /* 高度是辅助信息容器的80% */
   width: 100%; /* 宽度是辅助信息容器的100% */
   padding-top: 1vh; /* 在顶部添加间隔 */
+  max-height: 80%;
+  overflow-y: auto;
+
 }
 .session-item{
   margin: 1rem;
@@ -511,6 +598,52 @@ export default {
 }
 .response-select-label{
   font-size: 1.5rem;
+}
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  background-color: #f9f9f9;
+  width: 4vw;
+  max-height: 8vh;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+
+}
+
+.dropdown-content a {
+  color: black;
+  padding: 5px 8px;
+  text-decoration: none;
+  display: block;
+  font-size: 1rem;
+}
+
+.dropdown-content a:hover {background-color: #f1f1f1;}
+
+.dropdown:hover .dropdown-content {display: block;}
+
+/* 自定义整个滚动条的宽度和背景颜色 */
+.chat-session::-webkit-scrollbar {
+  width: 12px; /* 设置滚动条的宽度 */
+  background-color: #031539; /* 设置滚动条的背景颜色 */
+}
+
+/* 自定义滚动条滑块的样式 */
+.chat-session::-webkit-scrollbar-thumb {
+  border-radius: 6px; /* 设置滑块的圆角 */
+  background-color: #031539; /* 设置滑块的背景颜色 */
+}
+
+/* 自定义滚动条滑轨的样式 */
+.chat-session::-webkit-scrollbar-track {
+  border-radius: 6px; /* 设置滑轨的圆角 */
+  box-shadow: inset 0 0 6px rgba(0,0,0,0.3); /* 在滑轨内部设置一个阴影效果 */
 }
 
 
